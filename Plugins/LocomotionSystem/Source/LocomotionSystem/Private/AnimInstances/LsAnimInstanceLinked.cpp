@@ -39,6 +39,35 @@ FSequenceEvaluatorReference ConvertToSequenceEvaluator(const FAnimNodeReference&
 }
 
 
+
+void CustomRotationMatching(const float RotationAlpha, const float DeltaTime, const float InterpSpeed, const FLocomotionData& LocomotionData, FCustomRotationData& OutCustomRotationData, FCurrentAnimData& OutCurrentAnimData)
+{
+	// 计算动画期望旋转：根据混合系数缩放目标角度，因为动画只有L90/L180/R90/R180，而目标角度并不是这四个固定角度
+	const float AnimDesiredRotation          = FRotator::NormalizeAxis(RotationAlpha * OutCurrentAnimData.TargetAngle);
+    // 实时获取当前加速度方向
+    const float TargetAccelerationDirection  = LocomotionData.Movements.Acceleration.GetSafeNormal2D().Rotation().Yaw;
+
+	// 平滑插值到加速度方向，避免方向突变，提供自然的旋转过渡
+	OutCurrentAnimData.CurrentAccelerationDirection = FRotator::NormalizeAxis(
+		FMath::RInterpTo(
+			FRotator(0.f, OutCurrentAnimData.CurrentAccelerationDirection, 0.f),
+			FRotator(0.f, TargetAccelerationDirection, 0.f),
+			DeltaTime,
+			InterpSpeed
+		).Yaw
+	);
+
+	// 计算加速度差异：当前加速度方向与进入动画时的加速度方向差异
+	const float AccelerationDifference = FRotator::NormalizeAxis(OutCurrentAnimData.CurrentAccelerationDirection - OutCurrentAnimData.EntryAccelerationDirection);
+	// 计算调整后的期望旋转：将加速度变化的影响应用到动画期望旋转上，同时缩放这个差异变化值
+	const float DesiredRotationChanged = FRotator::NormalizeAxis(AnimDesiredRotation + AccelerationDifference * RotationAlpha);
+
+	// 输出最总自定义旋转：将计算的旋转值结果加到当前的组件旋转值上
+	OutCustomRotationData.CustomRotationYaw = FRotator::NormalizeAxis(DesiredRotationChanged + OutCurrentAnimData.EntryRotationYaw);
+}
+
+
+
 // 设置空闲状态的动画行为（挂载到OutputPose节点上）
 void ULsAnimInstanceLinked::Setup_IdleState(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
 {
@@ -57,15 +86,37 @@ void ULsAnimInstanceLinked::Setup_StartAnim(const FAnimUpdateContext& Context, c
 
 	// 获取序列求值器
 	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
-	
+
 	// 设置动画序列
 	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluator, StartAnimData.AnimSequence);
-
-	// 设置开始时的播放时间
+	// 将动画显式设置为起始位置（第0帧）
+	// 确保每次进入该状态时都从动画开头开始播放
 	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluator, 0.f);
 
-	// 设置自定义旋转模式为插值旋转
-	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EInterpRotation;
+	// 定义为动画驱动状态
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EAnimRotation;
+	// 检查是否满足特定条件来切换为插值旋转模式
+	// 条件：速度方向和加速度方向均为正向时，使用插值旋转
+	if (ECardinalDirection::EForward == MainAnimInstance->LocomotionData.Rotations.VelocityCardinalDirection)
+	{
+		if (ECardinalDirection::EForward == MainAnimInstance->LocomotionData.Rotations.AccelerationCardinalDirection)
+		{
+			MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EInterpRotation;
+		}
+	}
+	
+	// 将目标角度设为本地加速度方向，即角色最终要转向本地加速度的那个方向
+	StartAnimData.TargetAngle                   = MainAnimInstance->LocomotionData.Rotations.LocalAccelerationDirection;
+	// 计算当前2D平面上的加速度方向角度
+	StartAnimData.CurrentAccelerationDirection  = MainAnimInstance->LocomotionData.Movements.Acceleration.GetSafeNormal2D().Rotation().Yaw;
+	// 记录进入时的加速度方向为初始方向
+	StartAnimData.EntryAccelerationDirection    = StartAnimData.CurrentAccelerationDirection;
+	// 记录角色进入时的初始Yaw旋转值为当前角色的旋转
+	StartAnimData.EntryRotationYaw              = MainAnimInstance->LocomotionData.Rotations.ActorRotation.Yaw;
+
+	// 重置播放速率和步幅适配Alpha数据
+	StartAnimData.FirstStepAlpha = 0.f;
+	StartAnimData.StrideWarpingAlpha = 0.f;
 }
 
 void ULsAnimInstanceLinked::Update_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
@@ -75,13 +126,39 @@ void ULsAnimInstanceLinked::Update_StartAnim(const FAnimUpdateContext& Context, 
 	// 获取序列求值器
 	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
 
+	const float DeltaTime  = Context.GetContext()->GetDeltaTime();
+	const float CurrentTime = USequenceEvaluatorLibrary::GetAccumulatedTime(SequenceEvaluator);  // 当前播放动画时间
+	const float RotationAlpha = StartAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)CurrentTime);
+
+	// 在播放动画的几帧时间里，缩放步幅和动画播放率
+	// 步幅混合权重计算：小于0.1s则输出权重为0， 大于0.4s则输出权重为1
+	 StartAnimData.FirstStepAlpha = FMath::GetMappedRangeValueClamped(
+        FVector2f(0.1f, 0.4f),
+        FVector2f(0.f, 1.f),
+        CurrentTime
+	 );
+	StartAnimData.StrideWarpingAlpha = StartAnimData.FirstStepAlpha;
+
+	FVector2D PlayRateClamped = PlayRateDefault;
+	// 距离检查：如果累计距离小于2个单位，就扩大播放速率
+	if (StartAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.Distance, (double)CurrentTime) < 2.f)
+	{
+		PlayRateClamped.Y = 2.f;
+	}
+	// 根据步幅权重插值最终播放速率
+	const FVector2D PlayRateFinal = FMath::Lerp(FVector2D(0.5f, 1.5f), PlayRateClamped, StartAnimData.FirstStepAlpha);
+
 	// 根据距离匹配调整动画播放速率
+	// 这确保了动画与角色实际运动保持同步
 	UAnimDistanceMatchingLibrary::AdvanceTimeByDistanceMatching(
 		Context,
 		SequenceEvaluator,
-		MainAnimInstance->LocomotionData.Movements.FrameDisplacement,
-		AnimCurveName.Distance
+		MainAnimInstance->LocomotionData.Movements.FrameDisplacement,  // 当前帧的位置距离，也就是Distance Traveled
+		AnimCurveName.Distance,
+		PlayRateFinal
 	);
+
+	CustomRotationMatching(RotationAlpha, DeltaTime, 10.f, MainAnimInstance->LocomotionData, MovementComponent->CustomRotationData, StartAnimData);
 }
 
 // 设置循环状态的动画行为（挂载到OutputPose节点上）
