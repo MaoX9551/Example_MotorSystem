@@ -100,6 +100,14 @@ protected:
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Setup_IdleState(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData StartAnimData;
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Setup_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 	UPROPERTY(BlueprintReadOnly)
 	FCurrentAnimData CycAnimData;
@@ -118,8 +126,12 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim")
 	FVector2D PlayRateDefault {0.75f, 1.25f};
 
+
+	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
+	TObjectPtr<UChooserTable> StartAnimChooserTable;
+	
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
 	TObjectPtr<UChooserTable> CycleAnimChooserTable;
 
-	UAnimSequence* GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable);
+	static UAnimSequence* GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable);
 };

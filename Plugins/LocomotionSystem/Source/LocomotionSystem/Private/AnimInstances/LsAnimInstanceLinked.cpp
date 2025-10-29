@@ -31,6 +31,13 @@ FSequencePlayerReference ConvertToSequencePlayer(const FAnimNodeReference& Node)
 	return EAnimNodeReferenceConversionResult::Failed == ConversionResult ? FSequencePlayerReference() : SequencePlayer;
 }
 
+FSequenceEvaluatorReference ConvertToSequenceEvaluator(const FAnimNodeReference& Node)
+{
+	EAnimNodeReferenceConversionResult ConversionResult;
+	const FSequenceEvaluatorReference SequenceEvaluator = USequenceEvaluatorLibrary::ConvertToSequenceEvaluator(Node, ConversionResult);
+	return ConversionResult == EAnimNodeReferenceConversionResult::Failed ? FSequenceEvaluatorReference() : SequenceEvaluator;
+}
+
 
 // 设置空闲状态的动画行为（挂载到OutputPose节点上）
 void ULsAnimInstanceLinked::Setup_IdleState(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
@@ -39,6 +46,42 @@ void ULsAnimInstanceLinked::Setup_IdleState(const FAnimUpdateContext& Context, c
 
 	// 在空闲状态下，设置自定义旋转模式为保持当前旋转
 	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EHoldRotation;
+}
+
+void ULsAnimInstanceLinked::Setup_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	// 匹配动画序列
+	StartAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, StartAnimChooserTable);
+
+	// 获取序列求值器
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+	
+	// 设置动画序列
+	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluator, StartAnimData.AnimSequence);
+
+	// 设置开始时的播放时间
+	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluator, 0.f);
+
+	// 设置自定义旋转模式为插值旋转
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EInterpRotation;
+}
+
+void ULsAnimInstanceLinked::Update_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	// 获取序列求值器
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	// 根据距离匹配调整动画播放速率
+	UAnimDistanceMatchingLibrary::AdvanceTimeByDistanceMatching(
+		Context,
+		SequenceEvaluator,
+		MainAnimInstance->LocomotionData.Movements.FrameDisplacement,
+		AnimCurveName.Distance
+	);
 }
 
 // 设置循环状态的动画行为（挂载到OutputPose节点上）
@@ -58,7 +101,7 @@ void ULsAnimInstanceLinked::Update_CycleAnim(const FAnimUpdateContext& Context, 
 	// 从选择器表中获取合适当前状态的动画序列
 	CycAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CycleAnimChooserTable);
 	// 将当前节点转换为序列播放器
-	const FSequencePlayerReference SequencePlayer = ConvertToSequencePlayer(Node);
+	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
 	// 使用惯性混合设置动画序列，实现平滑的动画过渡
 	// 这是Cycle状态内部动画切换时的惯性化混合，比如跑步循环动画切换到行走循环动画，不是状态间过渡时的惯性化设置
 	USequencePlayerLibrary::SetSequenceWithInertialBlending(Context, SequencePlayer, CycAnimData.AnimSequence);

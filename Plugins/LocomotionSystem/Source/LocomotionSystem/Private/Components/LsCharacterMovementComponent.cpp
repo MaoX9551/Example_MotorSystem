@@ -40,6 +40,7 @@ void ULsCharacterMovementComponent::PhysicsRotation(float DeltaTime)
 		{
 			// 使用FixedTurn函数平滑过渡到目标角度
 			// GetDeltaRotation: 返回在DeltaTime 时间间隔内需要旋转角色的角度
+			// FMath::FixedTurn: 让旋转的Yaw（偏航角）以固定速度从当前角度逐步逼近目标角度，实现平滑受限的转向。
 			DesiredRotation.Yaw = FMath::FixedTurn(CurrentRotation.Yaw, DesiredRotation.Yaw, GetDeltaRotation(DeltaTime).Yaw);
 		}
 
