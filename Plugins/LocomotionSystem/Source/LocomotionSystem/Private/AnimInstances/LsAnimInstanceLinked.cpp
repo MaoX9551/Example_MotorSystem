@@ -226,16 +226,9 @@ void ULsAnimInstanceLinked::Update_StopAnim(const FAnimUpdateContext& Context, c
 				MovementComponent->BrakingDecelerationWalking
 			).Length();
 
-
-			UE_LOG(LogTemp, Warning, TEXT("StopDistance：%f"), StopDistance)
-			
 			// 如果距离大于5就进行距离匹配，太小就没必要了
-			//TODO: 我的程序这里计算的值一直是小于5的，没有找到原因
 			if (StopDistance >= 5.f)
 			{
-			
-				UE_LOG(LogTemp, Error, TEXT("StopDistance ！！！！！！！！！！！！！"))
-				
 				// 使用距离匹配技术，根据预测的停止距离调整动画播放位置
 				UAnimDistanceMatchingLibrary::DistanceMatchToTarget(SequenceEvaluator, StopDistance, AnimCurveName.Distance);
 			}
