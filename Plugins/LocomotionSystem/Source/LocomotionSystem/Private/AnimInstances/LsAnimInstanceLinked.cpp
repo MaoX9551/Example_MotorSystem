@@ -95,7 +95,7 @@ void ULsAnimInstanceLinked::Setup_StartAnim(const FAnimUpdateContext& Context, c
 
 	// 定义为动画驱动状态
 	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EAnimRotation;
-	// 检查是否满足特定条件来切换为插值旋转模式
+	// 检查是否满足特定条件来切换为插值旋转模式: 用来避免在向前移动时出现平移现象
 	// 条件：速度方向和加速度方向均为正向时，使用插值旋转
 	if (ECardinalDirection::EForward == MainAnimInstance->LocomotionData.Rotations.VelocityCardinalDirection)
 	{
@@ -176,14 +176,22 @@ void ULsAnimInstanceLinked::Update_CycleAnim(const FAnimUpdateContext& Context, 
 	if (!MovementComponent || !MainAnimInstance) return;
 
 	// 从选择器表中获取合适当前状态的动画序列
-	CycAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CycleAnimChooserTable);
+	CycleAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CycleAnimChooserTable);
 	// 将当前节点转换为序列播放器
 	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
 	// 使用惯性混合设置动画序列，实现平滑的动画过渡
 	// 这是Cycle状态内部动画切换时的惯性化混合，比如跑步循环动画切换到行走循环动画，不是状态间过渡时的惯性化设置
-	USequencePlayerLibrary::SetSequenceWithInertialBlending(Context, SequencePlayer, CycAnimData.AnimSequence);
+	USequencePlayerLibrary::SetSequenceWithInertialBlending(Context, SequencePlayer, CycleAnimData.AnimSequence);
 	// 虚幻引擎的距离匹配：用于根据角色移动速度动态调整动画播放速率
 	UAnimDistanceMatchingLibrary::SetPlayrateToMatchSpeed(SequencePlayer, MainAnimInstance->LocomotionData.Movements.FrameDisplacementSpeed);
+}
+
+void ULsAnimInstanceLinked::Setup_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+}
+
+void ULsAnimInstanceLinked::Update_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
 }
 
 UAnimSequence* ULsAnimInstanceLinked::GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable)

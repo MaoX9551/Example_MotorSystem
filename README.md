@@ -36,3 +36,9 @@ UAnimSequence* ULsAnimInstanceLinked::GetAnimSequence(const UObject* ContextObje
 	return Cast<UAnimSequence>(UChooserFunctionLibrary::EvaluateChooser(ContextObject, AnimChooserTable, UAnimSequence::StaticClass()));
 }
 ```
+
+
+
+## 注意
+
+Update_Start 函数中，使用的自定义旋转有点复杂，需要静心研究一下

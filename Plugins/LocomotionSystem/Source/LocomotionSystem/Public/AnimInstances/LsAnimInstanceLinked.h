@@ -110,13 +110,23 @@ protected:
 	void Update_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 	UPROPERTY(BlueprintReadOnly)
-	FCurrentAnimData CycAnimData;
+	FCurrentAnimData CycleAnimData;
 
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Setup_CycleState(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Update_CycleAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData StopAnimData;
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Setup_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 private:
 
@@ -132,6 +142,9 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
 	TObjectPtr<UChooserTable> CycleAnimChooserTable;
+
+	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
+	TObjectPtr<UChooserTable> StopAnimChooserTable;
 
 	static UAnimSequence* GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable);
 };
