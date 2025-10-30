@@ -3,6 +3,8 @@
 
 #include "AnimInstances/LsAnimInstanceLinked.h"
 
+#include "AnimationStateMachineLibrary.h"
+#include "AnimCharacterMovementLibrary.h"
 #include "AnimDistanceMatchingLibrary.h"
 #include "ChooserFunctionLibrary.h"
 #include "SequencePlayerLibrary.h"
@@ -188,10 +190,60 @@ void ULsAnimInstanceLinked::Update_CycleAnim(const FAnimUpdateContext& Context, 
 
 void ULsAnimInstanceLinked::Setup_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
 {
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	StopAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, StopAnimChooserTable);
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	// 这里为什么不适用混合呢？因为停止的时候不会出现运动速度变化吗？？？
+	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluator, StopAnimData.AnimSequence);
+	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluator, 1.55f);
+
+	// 设置旋转模式为保持当前旋转
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EHoldRotation;
 }
 
 void ULsAnimInstanceLinked::Update_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
 {
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	// 检查角色是否没有了加速度
+	if (!MainAnimInstance->LocomotionData.States.bIsAcceleration)
+	{
+		// 判断是否仍在移动？ （没有加速度也是可以移动的，因为有惯性）
+		if (MainAnimInstance->LocomotionData.States.bIsMoving)
+		{
+
+			const float StopDistance = UAnimCharacterMovementLibrary::PredictGroundMovementStopLocation(
+				MovementComponent->Velocity,
+				MovementComponent->bUseSeparateBrakingFriction,
+				MovementComponent->BrakingFriction,
+				MovementComponent->GroundFriction,
+				MovementComponent->BrakingFrictionFactor,
+				MovementComponent->BrakingDecelerationWalking
+			).Length();
+
+
+			UE_LOG(LogTemp, Warning, TEXT("StopDistance：%f"), StopDistance)
+			
+			// 如果距离大于5就进行距离匹配，太小就没必要了
+			//TODO: 我的程序这里计算的值一直是小于5的，没有找到原因
+			if (StopDistance >= 5.f)
+			{
+			
+				UE_LOG(LogTemp, Error, TEXT("StopDistance ！！！！！！！！！！！！！"))
+				
+				// 使用距离匹配技术，根据预测的停止距离调整动画播放位置
+				UAnimDistanceMatchingLibrary::DistanceMatchToTarget(SequenceEvaluator, StopDistance, AnimCurveName.Distance);
+			}
+		}
+	}
+
+	// 推荐动画时间
+	USequenceEvaluatorLibrary::AdvanceTime(Context, SequenceEvaluator, 1.25f);
 }
 
 UAnimSequence* ULsAnimInstanceLinked::GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable)

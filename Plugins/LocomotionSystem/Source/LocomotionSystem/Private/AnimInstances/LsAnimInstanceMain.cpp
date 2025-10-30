@@ -12,6 +12,8 @@ void ULsAnimInstanceMain::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
 	UpdateLocomotionData(DeltaSeconds);
+
+	UpdateFootUpValue(DeltaSeconds);
 }
 
 void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
@@ -100,6 +102,25 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 	// 所有数据处理完成，标记为非首次更新
 	LocomotionData.bIsFirstUpdate = false;
 
+}
+
+void ULsAnimInstanceMain::UpdateFootUpValue(float DeltaTime)
+{
+	if (!GetOwningComponent() || !TryGetPawnOwner()) return;
+
+	// 获取脚部骨骼的2D方向向量
+	const FVector FootL = GetOwningComponent()->GetSocketTransform("foot_l", RTS_Component).GetLocation().GetSafeNormal2D();
+	const FVector FootR = GetOwningComponent()->GetSocketTransform("foot_r", RTS_Component).GetLocation().GetSafeNormal2D();
+
+	// 获取局部空间的速度方向
+	const FVector LocalVelocityDirection = GetOwningComponent()->GetComponentRotation().UnrotateVector(TryGetPawnOwner()->GetVelocity().GetSafeNormal2D());
+
+	// 计算脚部与运动方向的点积
+	const float DotFootL = UKismetMathLibrary::Dot_VectorVector(FootL, LocalVelocityDirection);
+	const float DotFootR = UKismetMathLibrary::Dot_VectorVector(FootR, LocalVelocityDirection);
+
+	// 决定抬脚状态
+	LocomotionData.States.bLeftFootUp = DotFootL > DotFootR;
 }
 
 ECardinalDirection ULsAnimInstanceMain::SelectCardinalDirection(float CurrentAngle, ECardinalDirection CurrentDirection, bool bUseCurrentDirection, float DeadZone)

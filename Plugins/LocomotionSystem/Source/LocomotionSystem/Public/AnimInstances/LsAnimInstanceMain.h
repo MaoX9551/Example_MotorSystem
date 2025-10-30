@@ -29,6 +29,9 @@ private:
 	// 更新运动数据：计算和处理角色的移动，旋转等运动相关数据
 	void UpdateLocomotionData(float DeltaTime);
 
+	// 更新左脚数据：计算处理左脚数据
+	void UpdateFootUpValue(float DeltaTime);
+
 	/**
 	 * 选择基本方位方向
 	 * 根据角度值确定最合适的基本方向
@@ -38,5 +41,5 @@ private:
 	 * @param DeadZone  - 死区范围，避免方向频繁切换
 	 * @return 计算得到的基本方位方向
 	 */
-	ECardinalDirection SelectCardinalDirection(float CurrentAngle, ECardinalDirection CurrentDirection = ECardinalDirection::EForward, bool bUseCurrentDirection = false, float DeadZone = 10.f);
+	static ECardinalDirection SelectCardinalDirection(float CurrentAngle, ECardinalDirection CurrentDirection = ECardinalDirection::EForward, bool bUseCurrentDirection = false, float DeadZone = 10.f);
 };
