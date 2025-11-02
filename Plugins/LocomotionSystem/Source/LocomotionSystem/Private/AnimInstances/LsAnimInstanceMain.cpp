@@ -72,14 +72,14 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 			LocomotionData.States.bIsMoving
 		);
 	}
-	
+
 #pragma endregion
 
 #pragma region [Update Acceleration Data] ------------------------------------------------------------------------------------------
-	LocomotionData.Movements.Acceleration        = MovementComponent->GetCurrentAcceleration();
-	LocomotionData.Movements.Acceleration2D      = LocomotionData.Movements.Acceleration * FVector(1.f, 1.f, 0.f);
+	LocomotionData.Movements.Acceleration = MovementComponent->GetCurrentAcceleration();
+	LocomotionData.Movements.Acceleration2D = LocomotionData.Movements.Acceleration * FVector(1.f, 1.f, 0.f);
 	LocomotionData.Movements.LocalAcceleration2D = LocomotionData.Rotations.ActorRotation.UnrotateVector(LocomotionData.Movements.Acceleration2D);
-	LocomotionData.States.bIsAcceleration        = LocomotionData.Movements.Acceleration2D.SizeSquared() > KINDA_SMALL_NUMBER;
+	LocomotionData.States.bIsAcceleration = LocomotionData.Movements.Acceleration2D.SizeSquared() > KINDA_SMALL_NUMBER;
 
 	// 如果存在加速度
 	if (LocomotionData.States.bIsAcceleration)
@@ -89,7 +89,7 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 			LocomotionData.Movements.Acceleration,
 			LocomotionData.Rotations.ActorRotation
 		);
-         // 选择加速度的基本方向
+		// 选择加速度的基本方向
 		LocomotionData.Rotations.AccelerationCardinalDirection = SelectCardinalDirection(
 			LocomotionData.Rotations.LocalAccelerationDirection,
 			LocomotionData.Rotations.AccelerationCardinalDirection,
@@ -98,10 +98,48 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 	}
 #pragma endregion
 
+#pragma region [Update Pivot Data] ------------------------------------------------------------------------------------------
+
+	// 计算加速度和速度的点积
+	const float DotAccelerationVelocity = LocomotionData.Movements.Acceleration.GetSafeNormal2D().Dot(LocomotionData.Movements.Velocity.GetSafeNormal2D());
+
+	UE_LOG(LogTemp, Warning, TEXT("DotAccelerationVelocity: %f"), DotAccelerationVelocity)
+
+	/* 回转条件开始检测：运动中，加速度方向突然与速度方向相反（夹角 > |±120|，点积 < -0.5） */
+	if (DotAccelerationVelocity < -0.5f)
+	{
+		UE_LOG(LogTemp, Error, TEXT("=》 Step 1, GroundSpeed: %f, MaxGroundSpeed: %f"), LocomotionData.Movements.GroundSpeed, LocomotionData.Movements.MaxGroundSpeed)
+		
+		// 当前速度足够快（大于最大速度的50%）
+		// if (LocomotionData.Movements.GroundSpeed > LocomotionData.Movements.MaxGroundSpeed * 0.5f)
+		// {
+			// 若当前不是回转状态且有加速度
+			if (!LocomotionData.States.bIsPivoting && LocomotionData.States.bIsAcceleration)
+			{
+				// 则可以进行回转运动
+				LocomotionData.States.bIsPivoting = true;
+			}
+		//}
+	}
+	/*  回转结束条件检测：加速度方向和速度方向夹角 ≤ |±90°|，即Dot ≥ 0时，表示输入与运动方向一致 */
+	if (DotAccelerationVelocity >= 0.f)
+	{
+		// 若当前处于回转状态，但没有了加速度
+		if (LocomotionData.States.bIsPivoting && !LocomotionData.States.bIsAcceleration)
+		{
+			// 结束回转运动
+			LocomotionData.States.bIsPivoting = false;
+		}
+		// 补充条件：若惯性导致的移动，也结束回转
+		if (LocomotionData.States.bIsMoving)
+		{
+			LocomotionData.States.bIsPivoting = false;
+		}
+	}
+#pragma endregion
 
 	// 所有数据处理完成，标记为非首次更新
 	LocomotionData.bIsFirstUpdate = false;
-
 }
 
 void ULsAnimInstanceMain::UpdateFootUpValue(float DeltaTime)
@@ -125,7 +163,6 @@ void ULsAnimInstanceMain::UpdateFootUpValue(float DeltaTime)
 
 ECardinalDirection ULsAnimInstanceMain::SelectCardinalDirection(float CurrentAngle, ECardinalDirection CurrentDirection, bool bUseCurrentDirection, float DeadZone)
 {
-
 	// 设计优点：
 	// 1.防抖动：死区机制避免在边界角度频繁切换方向
 	// 2.方向惯性: 保持当前方向的时间更长，操作感更舒适
@@ -150,5 +187,5 @@ ECardinalDirection ULsAnimInstanceMain::SelectCardinalDirection(float CurrentAng
 	if (AbsAngle >= 135.f - BwdDeadZone) return ECardinalDirection::EBackward;
 
 	// 虚幻口诀：左负右正（左半圆0~负180，右半圆0~正180）
-	return CurrentAngle > 0.f ? ECardinalDirection::ERight:ECardinalDirection::ELeft;
+	return CurrentAngle > 0.f ? ECardinalDirection::ERight : ECardinalDirection::ELeft;
 }

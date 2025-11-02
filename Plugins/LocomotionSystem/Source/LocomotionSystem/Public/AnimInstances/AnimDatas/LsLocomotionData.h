@@ -72,7 +72,7 @@ struct FCharacterMovement
 
 	// 地面步态：步行、跑步、 冲刺等
 	UPROPERTY(BlueprintReadOnly)
-	EGroundGait GroundGait { };
+	EGroundGait GroundGait { EGroundGait::ERun };
 	// 角色的世界位置
 	UPROPERTY(BlueprintReadOnly)
 	FVector ActorLocation { };

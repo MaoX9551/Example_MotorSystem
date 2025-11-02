@@ -117,8 +117,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Update_CycleAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
-
-
+	
 	UPROPERTY(BlueprintReadOnly)
 	FCurrentAnimData StopAnimData;
 
@@ -127,6 +126,24 @@ protected:
 
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Update_StopAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData PivotAnimData;
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Setup_PivotAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_PivotAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData PostAnimData;
+	
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Setup_PostAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_PostAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 private:
 
@@ -145,6 +162,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
 	TObjectPtr<UChooserTable> StopAnimChooserTable;
+
+	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
+	TObjectPtr<UChooserTable> PivotAnimChooserTable;
 
 	static UAnimSequence* GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable);
 };

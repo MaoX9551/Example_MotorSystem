@@ -239,6 +239,123 @@ void ULsAnimInstanceLinked::Update_StopAnim(const FAnimUpdateContext& Context, c
 	USequenceEvaluatorLibrary::AdvanceTime(Context, SequenceEvaluator, 1.25f);
 }
 
+void ULsAnimInstanceLinked::Setup_PivotAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+	
+	PivotAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, PivotAnimChooserTable);
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluator, PivotAnimData.AnimSequence);
+	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluator, 0.f);
+
+	// 因为前面可能会有旋转动作，所以这里使用动画驱动
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EAnimRotation;
+	
+	// 准备自定义选择匹配数据
+	PivotAnimData.CurrentAccelerationDirection  = MainAnimInstance->LocomotionData.Movements.Acceleration.GetSafeNormal2D().Rotation().Yaw;
+	PivotAnimData.EntryAccelerationDirection    = FRotator::NormalizeAxis(PivotAnimData.CurrentAccelerationDirection);
+	PivotAnimData.EntryRotationYaw              = MainAnimInstance->LocomotionData.Rotations.ActorRotation.Yaw;
+	PivotAnimData.TargetAngle                   = MainAnimInstance->LocomotionData.Rotations.LocalAccelerationDirection;
+
+	// 初始化Post状态数据
+	PostAnimData.AnimSequence      = PivotAnimData.AnimSequence;
+	PostAnimData.AnimStartPosition = 0.f;
+	PostAnimData.TargetAngle       = MainAnimInstance->LocomotionData.Rotations.LocalAccelerationDirection;
+}
+
+void ULsAnimInstanceLinked::Update_PivotAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	// 预测地面移动的回转距离（基于加速度、速度和摩擦计算）
+	const float PivotDistance = UAnimCharacterMovementLibrary::PredictGroundMovementPivotLocation(
+		MovementComponent->GetCurrentAcceleration(),
+		MovementComponent->Velocity,
+		MovementComponent->GroundFriction // 地面摩擦系数
+	).Length();
+
+	// 如果角色正在转身且有加速度，应用距离匹配
+	if (MainAnimInstance->LocomotionData.States.bIsPivoting && MainAnimInstance->LocomotionData.States.bIsAcceleration)
+	{
+		UAnimDistanceMatchingLibrary::DistanceMatchToTarget(SequenceEvaluator, PivotDistance, AnimCurveName.Distance);
+	}
+
+	// 自定义选择匹配
+	const float DeltaTime     = Context.GetContext()->GetDeltaTime();
+	const float CurrentTime   = USequenceEvaluatorLibrary::GetAccumulatedTime(SequenceEvaluator);
+	const float RotationAlpha = PivotAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)CurrentTime);
+
+	CustomRotationMatching(RotationAlpha, CurrentTime, 10.f, MainAnimInstance->LocomotionData, MovementComponent->CustomRotationData, PivotAnimData);
+
+	// 指定Post状态的动画起始播放位置
+	PostAnimData.AnimStartPosition = USequenceEvaluatorLibrary::GetAccumulatedTime(SequenceEvaluator);
+}
+
+void ULsAnimInstanceLinked::Setup_PostAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	USequenceEvaluatorLibrary::SetSequence(SequenceEvaluator, PostAnimData.AnimSequence);
+	USequenceEvaluatorLibrary::SetExplicitTime(SequenceEvaluator, PostAnimData.AnimStartPosition);
+
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EAnimRotation;
+
+
+	// 保存原始目标角度
+	const float PostPivotDirection            = PostAnimData.TargetAngle;
+	// 从动画曲线获取旋转混合权重值（在动画的起始位置）
+	const float RotationAlpha                 = PostAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)PostAnimData.AnimStartPosition);
+	// 根据旋转混合权重调整目标角度
+	PostAnimData.TargetAngle                  = PostPivotDirection * (1.f - RotationAlpha);
+	// 根据当前加速度方向（转换为2D平面并获取偏航角）
+	PostAnimData.CurrentAccelerationDirection = MainAnimInstance->LocomotionData.Movements.Acceleration.GetSafeNormal2D().Rotation().Yaw;
+	// 计算方向差异：本地加速度方向与目标角度之间的标准化差异
+	const float DirectionDiff                 = FRotator::NormalizeAxis(MainAnimInstance->LocomotionData.Rotations.LocalAccelerationDirection - PostAnimData.TargetAngle);
+	// 计算进入时的加速度方向，考虑方向差异
+	PostAnimData.EntryAccelerationDirection   = FRotator::NormalizeAxis(PostAnimData.CurrentAccelerationDirection - DirectionDiff);
+	// 保存进入时的角色旋转偏航角
+	PostAnimData.EntryRotationYaw             = MainAnimInstance->LocomotionData.Rotations.ActorRotation.Yaw;
+}
+
+void ULsAnimInstanceLinked::Update_PostAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	const FSequenceEvaluatorReference& SequenceEvaluator = ConvertToSequenceEvaluator(Node);
+
+	const float DeltaTime = Context.GetContext()->GetDeltaTime();
+	const float CurrentTime = USequenceEvaluatorLibrary::GetAccumulatedTime(SequenceEvaluator);
+	
+	// 获取起始位置的旋转混合权重值
+	const float StartRotationAlpha = PostAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)PostAnimData.AnimStartPosition);
+    // 获取当前位置的旋转混合权重值
+	const float CurrentRotationAlpha = PostAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)CurrentTime);
+    // 将旋转混合权重从[StartRotationAlpha, 1]范围映射到[0, 1]范围
+	const float MappedRotationAlpha = FMath::GetMappedRangeValueClamped(FVector2f(StartRotationAlpha, 1.f), FVector2f(0.f, 1.f), CurrentRotationAlpha);
+
+	CustomRotationMatching(MappedRotationAlpha, DeltaTime, 10.f, MainAnimInstance->LocomotionData, MovementComponent->CustomRotationData, PostAnimData);
+	
+	FVector2D PlayRateFinal = PlayRateDefault;
+	if (PostAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.Distance, (double)CurrentTime) < 2.f)
+	{
+		PlayRateFinal.Y = 2.f;
+	}
+
+	UAnimDistanceMatchingLibrary::AdvanceTimeByDistanceMatching(
+        Context,
+        SequenceEvaluator,
+        MainAnimInstance->LocomotionData.Movements.FrameDisplacement,
+        AnimCurveName.Distance,
+        PlayRateFinal
+	);
+}
+
 UAnimSequence* ULsAnimInstanceLinked::GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable)
 {
 	check(AnimChooserTable);
