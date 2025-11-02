@@ -362,7 +362,7 @@ void ULsAnimInstanceLinked::Setup_CrossTurnAnim(const FAnimUpdateContext& Contex
 
 	CrossTurnAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CrossTurnAnimChooserTable);
 
-	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
+	const FSequencePlayerReference SequencePlayer = ConvertToSequencePlayer(Node);
 
 	USequencePlayerLibrary::SetSequence(SequencePlayer, CrossTurnAnimData.AnimSequence);
 
@@ -373,7 +373,7 @@ void ULsAnimInstanceLinked::Update_CrossTurnAnim(const FAnimUpdateContext& Conte
 {
 	if (!MovementComponent || !MainAnimInstance) return;
 
-	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
+	const FSequencePlayerReference SequencePlayer = ConvertToSequencePlayer(Node);
 
 	const float DeltaTime = Context.GetContext()->GetDeltaTime();
 	const float CurrentTime = USequencePlayerLibrary::GetAccumulatedTime(SequencePlayer);
