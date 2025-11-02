@@ -100,29 +100,22 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 
 #pragma region [Update Pivot Data] ------------------------------------------------------------------------------------------
 
-	// 计算加速度和速度的点积
-	const float DotAccelerationVelocity = LocomotionData.Movements.Acceleration.GetSafeNormal2D().Dot(LocomotionData.Movements.Velocity.GetSafeNormal2D());
-
-	UE_LOG(LogTemp, Warning, TEXT("DotAccelerationVelocity: %f"), DotAccelerationVelocity)
-
 	/* 回转条件开始检测：运动中，加速度方向突然与速度方向相反（夹角 > |±120|，点积 < -0.5） */
-	if (DotAccelerationVelocity < -0.5f)
+	if (LocomotionData.Movements.Acceleration.GetSafeNormal2D().Dot(LocomotionData.Movements.Velocity.GetSafeNormal2D()) < -0.5f)
 	{
-		UE_LOG(LogTemp, Error, TEXT("=》 Step 1, GroundSpeed: %f, MaxGroundSpeed: %f"), LocomotionData.Movements.GroundSpeed, LocomotionData.Movements.MaxGroundSpeed)
-		
 		// 当前速度足够快（大于最大速度的50%）
-		// if (LocomotionData.Movements.GroundSpeed > LocomotionData.Movements.MaxGroundSpeed * 0.5f)
-		// {
+		if (LocomotionData.Movements.GroundSpeed > LocomotionData.Movements.MaxGroundSpeed * PivotSpeedFactory)
+		 {
 			// 若当前不是回转状态且有加速度
 			if (!LocomotionData.States.bIsPivoting && LocomotionData.States.bIsAcceleration)
 			{
 				// 则可以进行回转运动
 				LocomotionData.States.bIsPivoting = true;
 			}
-		//}
+		}
 	}
 	/*  回转结束条件检测：加速度方向和速度方向夹角 ≤ |±90°|，即Dot ≥ 0时，表示输入与运动方向一致 */
-	if (DotAccelerationVelocity >= 0.f)
+	if (LocomotionData.Movements.Acceleration.GetSafeNormal2D().Dot(LocomotionData.Movements.Velocity.GetSafeNormal2D()) >= 0.f)
 	{
 		// 若当前处于回转状态，但没有了加速度
 		if (LocomotionData.States.bIsPivoting && !LocomotionData.States.bIsAcceleration)

@@ -23,6 +23,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FLocomotionData LocomotionData;
 
+	// 用于在动画蓝图中配置使用，我发现有的电脑反应速度这块存在延迟，根本无法快速响应Pivot
+	UPROPERTY(EditDefaultsOnly)
+	float PivotSpeedFactory {  0.5f };
 
 private:
 
