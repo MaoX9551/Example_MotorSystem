@@ -96,6 +96,12 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 			LocomotionData.States.bIsAcceleration
 		);
 	}
+
+	// 记录加速度的最后一帧
+	if (!LocomotionData.Movements.Acceleration.IsNearlyZero())
+	{
+		LocomotionData.Movements.LastNonZeroAcceleration = LocomotionData.Movements.Acceleration;
+	}
 #pragma endregion
 
 #pragma region [Update Pivot Data] ------------------------------------------------------------------------------------------
@@ -131,6 +137,39 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 	}
 #pragma endregion
 
+#pragma region [Update Cross Turn Data] ------------------------------------------------------------------------------------------
+
+    // 若没有了加速度
+	if (!LocomotionData.States.bIsAcceleration)
+	{
+		// 不管前面是否进行十字交叉转身，先停止
+		LocomotionData.States.bCrossTurn = false;
+
+		// 帧位移速度小于最大速度的1/3时
+		if (LocomotionData.Movements.FrameDisplacementSpeed < LocomotionData.Movements.MaxGroundSpeed * 0.3f)
+		{
+			// 计算最后非零加速度方向与当前旋转的偏角
+			const float YawOffset =
+				FRotator::NormalizeAxis(LocomotionData.Movements.LastNonZeroAcceleration.Rotation().Yaw - LocomotionData.Rotations.ActorRotation.Yaw);
+
+			// 若偏角超过60度时触发交叉转向
+			if (FMath::Abs(YawOffset) >= 60.f)
+			{
+				LocomotionData.States.bCrossTurn        = true;
+				LocomotionData.Rotations.CrossTurnAngle = YawOffset;
+			}
+		}
+	}
+
+	// 有加速度或移动时取消交叉转向
+	if (LocomotionData.States.bIsAcceleration || LocomotionData.States.bIsMoving)
+	{
+		LocomotionData.States.bCrossTurn        = false;
+		LocomotionData.Rotations.CrossTurnAngle = 0.f;
+	}
+	
+#pragma endregion 
+	
 	// 所有数据处理完成，标记为非首次更新
 	LocomotionData.bIsFirstUpdate = false;
 }

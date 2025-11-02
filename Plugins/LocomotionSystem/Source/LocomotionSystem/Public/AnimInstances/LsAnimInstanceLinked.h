@@ -145,6 +145,15 @@ protected:
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Update_PostAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData CrossTurnAnimData;
+	
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Setup_CrossTurnAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+	
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_CrossTurnAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
 private:
 
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim")
@@ -166,5 +175,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
 	TObjectPtr<UChooserTable> PivotAnimChooserTable;
 
+	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
+	TObjectPtr<UChooserTable> CrossTurnAnimChooserTable;
+	
 	static UAnimSequence* GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable);
 };

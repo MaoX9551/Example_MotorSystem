@@ -356,6 +356,43 @@ void ULsAnimInstanceLinked::Update_PostAnim(const FAnimUpdateContext& Context, c
 	);
 }
 
+void ULsAnimInstanceLinked::Setup_CrossTurnAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	CrossTurnAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CrossTurnAnimChooserTable);
+
+	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
+
+	USequencePlayerLibrary::SetSequence(SequencePlayer, CrossTurnAnimData.AnimSequence);
+
+	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EAnimRotation;
+}
+
+void ULsAnimInstanceLinked::Update_CrossTurnAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	const FSequencePlayerReference& SequencePlayer = ConvertToSequencePlayer(Node);
+
+	const float DeltaTime = Context.GetContext()->GetDeltaTime();
+	const float CurrentTime = USequencePlayerLibrary::GetAccumulatedTime(SequencePlayer);
+	const float RotationAlpha = CrossTurnAnimData.AnimSequence->EvaluateCurveData(AnimCurveName.RotationAlpha, (double)CurrentTime);
+
+	// 当动画旋转结束（基本上为1）时，就可以认为转身结束，不需要等待后续恢复站立姿态的动画帧了
+	if (RotationAlpha > 0.99f)
+	{
+		MainAnimInstance->LocomotionData.States.bCrossTurn = false;
+	}
+
+	MovementComponent->CustomRotationData.CustomRotationYaw = FMath::RInterpTo(
+        MainAnimInstance->LocomotionData.Rotations.ActorRotation.GetNormalized(),
+        MainAnimInstance->LocomotionData.Movements.LastNonZeroAcceleration.Rotation().GetNormalized(),
+        DeltaTime,
+        10.f
+	).GetNormalized().Yaw;
+}
+
 UAnimSequence* ULsAnimInstanceLinked::GetAnimSequence(const UObject* ContextObject, const UChooserTable* AnimChooserTable)
 {
 	check(AnimChooserTable);
