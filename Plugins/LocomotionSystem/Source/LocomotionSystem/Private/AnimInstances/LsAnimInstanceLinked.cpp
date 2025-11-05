@@ -79,6 +79,19 @@ void ULsAnimInstanceLinked::Setup_IdleState(const FAnimUpdateContext& Context, c
 	MovementComponent->CustomRotationData.CustomRotationMode = ECustomRotationMode::EHoldRotation;
 }
 
+
+void ULsAnimInstanceLinked::Update_IdleAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
+{
+	if (!MovementComponent || !MainAnimInstance) return;
+
+	// 匹配动画序列
+	IdleAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, IdleAnimChooserTable);
+
+	const FSequencePlayerReference SequencePlayer = ConvertToSequencePlayer(Node);
+
+	USequencePlayerLibrary::SetSequenceWithInertialBlending(Context, SequencePlayer, IdleAnimData.AnimSequence);
+}
+
 void ULsAnimInstanceLinked::Setup_StartAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node)
 {
 	if (!MovementComponent || !MainAnimInstance) return;

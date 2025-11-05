@@ -57,7 +57,16 @@ struct FCharacterState
 	// 左脚是否抬起
 	UPROPERTY(BlueprintReadOnly)
 	bool bLeftFootUp { };
-	
+
+	// 是否下蹲
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsCrouched { };
+
+	UPROPERTY()
+	bool bIsLastFrameCrouched { };
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bCrouchStateChanged { };
 };
 
 

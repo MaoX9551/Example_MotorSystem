@@ -5,6 +5,7 @@
 
 #include "KismetAnimationLibrary.h"
 #include "Components/LsCharacterMovementComponent.h"
+#include "GameFramework/Character.h"
 #include "Kismet/KismetMathLibrary.h"
 
 void ULsAnimInstanceMain::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
@@ -20,6 +21,9 @@ void ULsAnimInstanceMain::UpdateLocomotionData(float DeltaTime)
 {
 	if (!MovementComponent || !MovementComponent->GetCharacterOwner()) return;
 
+	LocomotionData.States.bIsLastFrameCrouched = LocomotionData.States.bIsCrouched;
+	LocomotionData.States.bIsCrouched = MovementComponent->GetCharacterOwner()->bIsCrouched;
+	LocomotionData.States.bCrouchStateChanged = LocomotionData.States.bIsLastFrameCrouched != LocomotionData.States.bIsCrouched;
 
 #pragma region [Update Rotation Data] ------------------------------------------------------------------------------------------
 	LocomotionData.Rotations.FrameYaw          = FRotator::NormalizeAxis(MovementComponent->UpdatedComponent->GetComponentRotation().Yaw - LocomotionData.Rotations.ActorRotation.Yaw); // 当前帧的值 - 上一帧的值

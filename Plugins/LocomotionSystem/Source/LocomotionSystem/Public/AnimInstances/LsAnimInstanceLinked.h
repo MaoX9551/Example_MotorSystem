@@ -96,9 +96,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<ULsAnimInstanceMain> MainAnimInstance;
 
+	UPROPERTY(BlueprintReadOnly)
+	FCurrentAnimData IdleAnimData;
 
 	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
 	void Setup_IdleState(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
+
+	UFUNCTION(BlueprintCallable, meta=(BlueprintThreadSafe))
+	void Update_IdleAnim(const FAnimUpdateContext& Context, const FAnimNodeReference& Node);
 
 	UPROPERTY(BlueprintReadOnly)
 	FCurrentAnimData StartAnimData;
@@ -162,6 +167,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim")
 	FVector2D PlayRateDefault {0.75f, 1.25f};
 
+	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
+	TObjectPtr<UChooserTable> IdleAnimChooserTable;
 
 	UPROPERTY(EditDefaultsOnly, Category="LsAnim|Anim Chooser Table")
 	TObjectPtr<UChooserTable> StartAnimChooserTable;
