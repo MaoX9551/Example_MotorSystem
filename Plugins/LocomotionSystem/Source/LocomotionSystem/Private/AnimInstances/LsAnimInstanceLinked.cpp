@@ -362,6 +362,8 @@ void ULsAnimInstanceLinked::Setup_CrossTurnAnim(const FAnimUpdateContext& Contex
 
 	CrossTurnAnimData.AnimSequence = GetAnimSequence(MainAnimInstance, CrossTurnAnimChooserTable);
 
+	UE_LOG(LogTemp, Warning, TEXT("CrossTurnAnimData.AnimSequence: %s"), *CrossTurnAnimData.AnimSequence->GetName())
+
 	const FSequencePlayerReference SequencePlayer = ConvertToSequencePlayer(Node);
 
 	USequencePlayerLibrary::SetSequence(SequencePlayer, CrossTurnAnimData.AnimSequence);
