@@ -9,10 +9,15 @@ void UGameUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	if (!CurrentPolicy && !DefaultUIPolicyClass.IsNull())
+	if (!CurrentPolicy)
 	{
-		TSubclassOf<UGameUIPolicy> PolicyClass = DefaultUIPolicyClass.LoadSynchronous();
-		SwitchToPolicy(NewObject<UGameUIPolicy>(this, PolicyClass));
+	
+	    // 1. 获取全局配置单例
+    	if (const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>(); !Settings->DefaultUIPolicyClass.IsNull())
+    	{
+    		const TSubclassOf<UGameUIPolicy> PolicyClass = Settings->DefaultUIPolicyClass.LoadSynchronous();
+    		SwitchToPolicy(NewObject<UGameUIPolicy>(this, PolicyClass));
+    	}
 	}
 }
 

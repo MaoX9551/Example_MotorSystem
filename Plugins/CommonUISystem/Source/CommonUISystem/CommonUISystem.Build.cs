@@ -31,6 +31,7 @@ public class CommonUISystem : ModuleRules
 				"CommonInput",
 				"CommonUI",
 				"GameplayTags",
+				"DeveloperSettings"
 			}
 			);
 			

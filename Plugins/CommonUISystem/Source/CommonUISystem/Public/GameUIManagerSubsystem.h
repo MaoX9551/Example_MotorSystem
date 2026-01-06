@@ -8,11 +8,27 @@
 
 class UCommonLocalPlayer;
 class UGameUIPolicy;
+
+
+UCLASS(Config=Game, DisplayName="UI管理")
+class UUIManagerSettings : public UDeveloperSettings
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(config, EditAnywhere, DisplayName="默认UI加载策略")
+	TSoftClassPtr<UGameUIPolicy> DefaultUIPolicyClass;
+};
+
+
+
+
 /**
  * 管理全局 UI 的生命周期,特别是通过 “UI 策略（UI Policy）” 来创建和管理玩家的根 UI 布局（Root Layout）
  * 
  */
-UCLASS(Abstract, Config=Game)
+UCLASS(Abstract)
 class COMMONUISYSTEM_API UGameUIManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -41,7 +57,4 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UGameUIPolicy> CurrentPolicy { nullptr };
-
-	UPROPERTY(config, EditAnywhere)
-	TSoftClassPtr<UGameUIPolicy> DefaultUIPolicyClass;
 };
