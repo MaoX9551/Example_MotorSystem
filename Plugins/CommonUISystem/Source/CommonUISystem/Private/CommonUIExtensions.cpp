@@ -5,7 +5,11 @@
 
 #include "CommonActivatableWidget.h"
 #include "CommonInputSubsystem.h"
+#include "CommonLocalPlayer.h"
 #include "GameplayTagContainer.h"
+#include "GameUIManagerSubsystem.h"
+#include "GameUIPolicy.h"
+#include "PrimaryGameLayout.h"
 #include "Blueprint/UserWidget.h"
 
 
@@ -55,15 +59,61 @@ UCommonActivatableWidget* UCommonUIExtensions::PushContentToLayer_ForPlayer(cons
 	{
 		return nullptr;
 	}
+
+	if (UGameUIManagerSubsystem* UIManager = LocalPlayer->GetGameInstance()->GetSubsystem<UGameUIManagerSubsystem>())
+	{
+		if (const UGameUIPolicy* Policy = UIManager->GetCurrentUIPolicy())
+		{
+			if (UPrimaryGameLayout* Layout = Policy->GetRootLayout(CastChecked<UCommonLocalPlayer>(LocalPlayer)))
+			{
+				return Layout->PushWidgetToLayerStack(LayerName, WidgetClass);
+			}
+		}
+	}
 	return nullptr;
 }
 
 void UCommonUIExtensions::PushStreamedContentToLayer_ForPlayer(const ULocalPlayer* LocalPlayer, FGameplayTag LayerName, TSoftClassPtr<UCommonActivatableWidget> WidgetClass)
 {
+	if (!ensure(LocalPlayer) || !ensure(!WidgetClass.IsNull()))
+	{
+		return;
+	}
+	
+	if (UGameUIManagerSubsystem* UIManager = LocalPlayer->GetGameInstance()->GetSubsystem<UGameUIManagerSubsystem>())
+	{
+		if (UGameUIPolicy* Policy = UIManager->GetCurrentUIPolicy())
+		{
+			if (UPrimaryGameLayout* RootLayout = Policy->GetRootLayout(CastChecked<UCommonLocalPlayer>(LocalPlayer)))
+			{
+				const bool bSuspendInputUntilComplete = true;
+				RootLayout->PushWidgetToLayerStackAsync(LayerName, bSuspendInputUntilComplete, WidgetClass);
+			}
+		}
+	}
 }
 
 void UCommonUIExtensions::PopContentFromLayer(UCommonActivatableWidget* ActivatableWidget)
 {
+	if (!ActivatableWidget)
+	{
+		// Ignore request to pop an already deleted widget
+		return;
+	}
+
+	if (const ULocalPlayer* LocalPlayer = ActivatableWidget->GetOwningLocalPlayer())
+	{
+		if (const UGameUIManagerSubsystem* UIManager = LocalPlayer->GetGameInstance()->GetSubsystem<UGameUIManagerSubsystem>())
+		{
+			if (const UGameUIPolicy* Policy = UIManager->GetCurrentUIPolicy())
+			{
+				if (UPrimaryGameLayout* RootLayout = Policy->GetRootLayout(CastChecked<UCommonLocalPlayer>(LocalPlayer)))
+				{
+					RootLayout->FindAndRemoveWidgetFromLayer(ActivatableWidget);
+				}
+			}
+		}
+	}
 }
 
 ULocalPlayer* UCommonUIExtensions::GetLocalPlayerFromController(APlayerController* PlayerController)
@@ -78,7 +128,7 @@ ULocalPlayer* UCommonUIExtensions::GetLocalPlayerFromController(APlayerControlle
 
 FName UCommonUIExtensions::SuspendInputForPlayer(APlayerController* PlayerController, FName SuspendReason)
 {
-	 return SuspendInputForPlayer(PlayerController ? PlayerController->GetLocalPlayer() : nullptr, SuspendReason);;
+	return SuspendInputForPlayer(PlayerController ? PlayerController->GetLocalPlayer() : nullptr, SuspendReason);;
 }
 
 FName UCommonUIExtensions::SuspendInputForPlayer(ULocalPlayer* LocalPlayer, FName SuspendReason)
@@ -118,5 +168,3 @@ void UCommonUIExtensions::ResumeInputForPlayer(ULocalPlayer* LocalPlayer, FName 
 		CommonInputSubsystem->SetInputTypeFilter(ECommonInputType::Touch, SuspendToken, false);
 	}
 }
-
-

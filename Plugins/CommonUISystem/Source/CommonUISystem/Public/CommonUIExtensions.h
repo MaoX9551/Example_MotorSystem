@@ -20,6 +20,7 @@ class COMMONUISYSTEM_API UCommonUIExtensions : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
+public:
 	/** 获取当前拥有该 UI 的玩家正在使用的输入类型（鼠标/键盘、手柄、触摸） */
 	UFUNCTION(BlueprintPure, BlueprintCosmetic, Category = "全局用户界面扩展", meta = (WorldContext = "WidgetContextObject"))
 	static ECommonInputType GetOwningPlayerInputType(const UUserWidget* WidgetContextObject);
