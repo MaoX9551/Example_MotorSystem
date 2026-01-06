@@ -360,6 +360,7 @@ void ULsAnimInstanceLinked::Update_PostAnim(const FAnimUpdateContext& Context, c
 		PlayRateFinal.Y = 2.f;
 	}
 
+	// 根据距离匹配播放速率
 	UAnimDistanceMatchingLibrary::AdvanceTimeByDistanceMatching(
         Context,
         SequenceEvaluator,
