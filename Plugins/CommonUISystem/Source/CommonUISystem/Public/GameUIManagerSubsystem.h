@@ -28,7 +28,8 @@ public:
  * 管理全局 UI 的生命周期,特别是通过 “UI 策略（UI Policy）” 来创建和管理玩家的根 UI 布局（Root Layout）
  * 
  */
-UCLASS(Abstract)
+// UCLASS(Abstract, config = Game)  --- 子类使用了ULyraUIManagerSubsystem
+UCLASS()
 class COMMONUISYSTEM_API UGameUIManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
