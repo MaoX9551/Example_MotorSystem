@@ -5,7 +5,7 @@
 
 #include "CommonLocalPlayer.h"
 #include "CommonUISystem.h"
-#include "GameUIManagerSubsystem.h"
+#include "UI/GameUIManagerSubsystem.h"
 
 UCommonGameInstance::UCommonGameInstance(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

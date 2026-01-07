@@ -1,14 +1,14 @@
 // @MaoX Coding 
 
 
-#include "GameUIPolicy.h"
+#include "UI/GameUIPolicy.h"
 
 #include "CommonLocalPlayer.h"
 #include "CommonUISystem.h"
 #include "Engine/GameInstance.h"
 #include "Framework/Application/SlateApplication.h"
-#include "GameUIManagerSubsystem.h"
-#include "PrimaryGameLayout.h"
+#include "UI/GameUIManagerSubsystem.h"
+#include "UI/PrimaryGameLayout.h"
 
 UGameUIPolicy* UGameUIPolicy::GetGameUIPolicy(const UObject* WorldContextObject)
 {

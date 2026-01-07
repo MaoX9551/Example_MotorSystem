@@ -1,13 +1,13 @@
 // @MaoX Coding 
 
 
-#include "GameUIManagerSubsystem.h"
+#include "UI/GameUIManagerSubsystem.h"
 
 #include "CommonLocalPlayer.h"
-#include "GameUIPolicy.h"
-#include "PrimaryGameLayout.h"
 #include "Components/SlateWrapperTypes.h"
 #include "GameFramework/HUD.h"
+#include "UI/GameUIPolicy.h"
+#include "UI/PrimaryGameLayout.h"
 
 void UGameUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

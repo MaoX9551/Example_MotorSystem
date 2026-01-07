@@ -3,8 +3,9 @@
 
 #include "CommonLocalPlayer.h"
 
-#include "GameUIManagerSubsystem.h"
-#include "GameUIPolicy.h"
+#include "UI/GameUIManagerSubsystem.h"
+#include "UI/GameUIPolicy.h"
+
 
 UCommonLocalPlayer::UCommonLocalPlayer()
 	:Super(FObjectInitializer::Get())

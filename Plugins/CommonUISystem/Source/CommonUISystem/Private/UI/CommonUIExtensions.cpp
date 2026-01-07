@@ -1,16 +1,16 @@
 ﻿// Copyright AssistantGame  2025@ 
 
 
-#include "CommonUIExtensions.h"
+#include "UI/CommonUIExtensions.h"
 
 #include "CommonActivatableWidget.h"
 #include "CommonInputSubsystem.h"
 #include "CommonLocalPlayer.h"
 #include "GameplayTagContainer.h"
-#include "GameUIManagerSubsystem.h"
-#include "GameUIPolicy.h"
-#include "PrimaryGameLayout.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/GameUIManagerSubsystem.h"
+#include "UI/GameUIPolicy.h"
+#include "UI/PrimaryGameLayout.h"
 
 
 int32 UCommonUIExtensions::InputSuspensions = 0;

@@ -1,14 +1,13 @@
 ﻿// Copyright AssistantGame  2025@ 
 
 
-#include "PrimaryGameLayout.h"
+#include "UI/PrimaryGameLayout.h"
 
 #include "CommonLocalPlayer.h"
-#include "CommonUIExtensions.h"
 #include "CommonUISystem.h"
-#include "GameUIManagerSubsystem.h"
-#include "GameUIPolicy.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/GameUIManagerSubsystem.h"
+#include "UI/GameUIPolicy.h"
 
 UPrimaryGameLayout::UPrimaryGameLayout(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
