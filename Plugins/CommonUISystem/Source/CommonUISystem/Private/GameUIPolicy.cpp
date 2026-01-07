@@ -131,22 +131,24 @@ TSubclassOf<UPrimaryGameLayout> UGameUIPolicy::GetLayoutWidgetClass(UCommonLocal
 void UGameUIPolicy::NotifyPlayerAdded(UCommonLocalPlayer* LocalPlayer)
 {
 	// 这里使用了一个 Lambda 表达式，绑定到 OnPlayerControllerSet 委托上
-	LocalPlayer->OnPlayerControllerSet.AddWeakLambda(this, [this](UCommonLocalPlayer* LocalPlayer, APlayerController* PlayerController)
+	LocalPlayer->OnPlayerControllerSet.AddWeakLambda(this, [this](UCommonLocalPlayer* CommonLocalPlayer, APlayerController* PlayerController)
 	{
 		// 清理之前的UI状态
-		NotifyPlayerRemoved(LocalPlayer);
+		NotifyPlayerRemoved(CommonLocalPlayer);
 
 		// 检查是否已经在记录表（RootViewportLayouts）里了？
-		if (FRootViewportLayoutInfo* LayoutInfo = RootViewportLayouts.FindByKey(LocalPlayer))
+		if (FRootViewportLayoutInfo* LayoutInfo = RootViewportLayouts.FindByKey(CommonLocalPlayer))
 		{
+			UE_LOG(LogCommonUISystem, Warning, TEXT("加载Layout到屏幕中！！！！！"));
 			// 如果已经在表里（可能是重新绑定 PC），直接把现有的 Layout 加回屏幕。
-			AddLayoutToViewport(LocalPlayer, LayoutInfo->RootLayout);
+			AddLayoutToViewport(CommonLocalPlayer, LayoutInfo->RootLayout);
 			LayoutInfo->bAddedToViewport = true;
 		}
 		else
 		{
+			UE_LOG(LogCommonUISystem, Warning, TEXT("创建新的LayoutWidget！！！！！"));
 			// 如果是全新的玩家，创建新的 Layout 实例。
-			CreateLayoutWidget(LocalPlayer);
+			CreateLayoutWidget(CommonLocalPlayer);
 		}
 	});
 }

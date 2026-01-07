@@ -3,7 +3,11 @@
 
 #include "GameUIManagerSubsystem.h"
 
+#include "CommonLocalPlayer.h"
 #include "GameUIPolicy.h"
+#include "PrimaryGameLayout.h"
+#include "Components/SlateWrapperTypes.h"
+#include "GameFramework/HUD.h"
 
 void UGameUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -19,6 +23,8 @@ void UGameUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     		SwitchToPolicy(NewObject<UGameUIPolicy>(this, PolicyClass));
     	}
 	}
+	
+	TickHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UGameUIManagerSubsystem::Tick), 0.0f);
 }
 
 void UGameUIManagerSubsystem::Deinitialize()
@@ -26,6 +32,8 @@ void UGameUIManagerSubsystem::Deinitialize()
 	Super::Deinitialize();
 
 	SwitchToPolicy(nullptr);
+	
+	FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
 }
 
 bool UGameUIManagerSubsystem::ShouldCreateSubsystem(UObject* Outer) const
@@ -72,5 +80,40 @@ void UGameUIManagerSubsystem::SwitchToPolicy(UGameUIPolicy* InPolicy)
 	if (CurrentPolicy != InPolicy)
 	{
 		CurrentPolicy = InPolicy;
+	}
+}
+
+bool UGameUIManagerSubsystem::Tick(float DeltaTime)
+{
+	SyncRootLayoutVisibilityToShowHUD();
+	
+	return true;
+}
+
+void UGameUIManagerSubsystem::SyncRootLayoutVisibilityToShowHUD()
+{
+	if (UGameUIPolicy* Policy = GetCurrentUIPolicy())
+	{
+		for (const ULocalPlayer* LocalPlayer : GetGameInstance()->GetLocalPlayers())
+		{
+			bool bShouldShowUI = true;
+			
+			if (const APlayerController* PC = LocalPlayer->GetPlayerController(GetWorld()))
+			{
+				if (const AHUD* HUD = PC->GetHUD(); HUD && !HUD->bShowHUD)
+				{
+					bShouldShowUI = false;
+				}
+			}
+			
+			if (UPrimaryGameLayout* RootLayout = Policy->GetRootLayout(CastChecked<UCommonLocalPlayer>(LocalPlayer)))
+			{
+				const ESlateVisibility DesiredVisibility = bShouldShowUI ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed;
+				if (DesiredVisibility != RootLayout->GetVisibility())
+				{
+					RootLayout->SetVisibility(DesiredVisibility);	
+				}
+			}
+		}
 	}
 }
